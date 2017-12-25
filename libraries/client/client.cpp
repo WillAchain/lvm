@@ -49,32 +49,27 @@ boost::program_options::variables_map Client::parse_option_variables(int argc, c
     ("data-dir", program_options::value<std::string>(), "Set lvm data directory")
     ;
     program_options::variables_map option_variables;
-    
     try {
         program_options::store(program_options::command_line_parser(argc, argv).
                                options(option_config).run(), option_variables);
         program_options::notify(option_variables);
-        
     } catch (program_options::error& cmdline_error) {
         std::cerr << "Error: " << cmdline_error.what() << "\n";
         std::cerr << option_config << "\n";
         exit(1);
     }
-    
     return option_variables;
 }
 
 fc::path Client::get_data_dir(const program_options::variables_map& option_variables) {
     try {
         fc::path datadir;
-        
         if (option_variables.count("data-dir")) {
 #ifdef WIN32
             datadir = fc::path(option_variables["data-dir"].as<string>());
 #else
             datadir = fc::path(option_variables["data-dir"].as<string>().c_str());
 #endif
-            
         } else {
             const auto get_os_specific_dir_name = [&](string dir_name) -> string {
 #ifdef WIN32
@@ -84,15 +79,13 @@ fc::path Client::get_data_dir(const program_options::variables_map& option_varia
                 dir_name.erase(end_pos, dir_name.end());
                 dir_name = "." + dir_name;
 #endif
-            
+
                 return dir_name;
             };
             datadir = fc::app_path() / get_os_specific_dir_name(LVM_NMAE);
         }
-        
         return datadir;
     }
-    
     FC_RETHROW_EXCEPTIONS(warn, "error loading config")
 }
 
@@ -101,12 +94,10 @@ void Client::configure_from_command_line(int argc, char** argv) {
         //my->_cli = new thinkyoung::cli::Cli(this, nullptr, &std::cout);
         return;
     }
-    
     // parse command-line options
     auto option_variables = parse_option_variables(argc, argv);
     fc::path datadir = get_data_dir(option_variables);
     _ob_global_config.data_file_path = datadir;
-    
     if (!fc::exists(_ob_global_config.data_file_path)) {
         std::cout << "lvm Creating new data directory " << _ob_global_config.data_file_path.preferred_string() << "\n";
         fc::create_directories(_ob_global_config.data_file_path);
@@ -118,7 +109,6 @@ void Client::configure_from_command_line(int argc, char** argv) {
         std::cout << "Note: new data directory is readable by all user accounts on non-UNIX OS\n";
 #endif
     }
-    
     _ob_global_config.logging = create_default_logging_config(datadir, _enable_ulog);
     fc::configure_logging(_ob_global_config.logging);
     init();
@@ -136,10 +126,10 @@ void Client::init() {
     if (!_sp_cli) {
         _sp_cli = std::make_shared<Cli>(this);
     }
-    
     if (!_sp_rpc_mgr) {
         _sp_rpc_mgr = std::make_shared<RpcMgr>(this);
-        _sp_rpc_mgr->set_endpoint(std::string("127.0.0.1"), 65000);
+        std::string str_tmp_ip("127.0.0.1");
+        _sp_rpc_mgr->set_endpoint(str_tmp_ip, 65000);
         _sp_rpc_mgr->start();
     }
 }

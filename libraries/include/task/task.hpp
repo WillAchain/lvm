@@ -597,13 +597,14 @@ FC_REFLECT_DERIVED(LuaRequestTaskResult, (TaskBase), (method)(params)(err_num))
 
 FC_REFLECT_DERIVED(TaskImplResult, (TaskBase), (error_code)(execute_count)(error_msg)(json_string))
 FC_REFLECT_DERIVED(CompileTaskResult, (TaskImplResult), (gpc_path_file))
-FC_REFLECT_DERIVED(RegisterTaskResult, (TaskImplResult))
-FC_REFLECT_DERIVED(CallTaskResult, (TaskImplResult))
-FC_REFLECT_DERIVED(TransferTaskResult, (TaskImplResult))
-FC_REFLECT_DERIVED(UpgradeTaskResult, (TaskImplResult))
-FC_REFLECT_DERIVED(DestroyTaskResult, (TaskImplResult))
+FC_REFLECT_EMPTY(RegisterTaskResult)
+FC_REFLECT_EMPTY(CallTaskResult)
+FC_REFLECT_EMPTY(TransferTaskResult)
+FC_REFLECT_EMPTY(UpgradeTaskResult)
+FC_REFLECT_EMPTY(DestroyTaskResult)
 FC_REFLECT_DERIVED(CompileScriptTaskResult, (TaskImplResult), (script_path_file))
-FC_REFLECT_DERIVED(HandleEventsTaskResult, (TaskImplResult))
-FC_REFLECT_DERIVED(CallContractOfflineTaskResult, (TaskImplResult))
+FC_REFLECT_EMPTY(HandleEventsTaskResult)
+FC_REFLECT_EMPTY(CallContractOfflineTaskResult)
+
 
 #endif

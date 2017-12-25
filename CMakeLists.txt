@@ -1,6 +1,7 @@
-# Defines BitShares library target.
+#Achain library target.
 project( lvm )
 cmake_minimum_required( VERSION 2.8.12 )
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
 #to supprot c++11, gcc must over version 4.8, clang over 3.3
 # http://stackoverflow.com/a/18369825
@@ -23,10 +24,11 @@ find_path(READLINE_INCLUDE_DIR readline/readline.h)
 AUX_SOURCE_DIRECTORY(libraries/base BASE_SRC)
 AUX_SOURCE_DIRECTORY(libraries/cli CLI_SRC)
 AUX_SOURCE_DIRECTORY(libraries/client CLIENT_SRC)
+AUX_SOURCE_DIRECTORY(libraries/glua GLUA_SRC)
 AUX_SOURCE_DIRECTORY(libraries/rpc RPC_SRC)
+AUX_SOURCE_DIRECTORY(libraries/storage STORAGE_SRC)
 AUX_SOURCE_DIRECTORY(libraries/stub STUB_SRC)
 AUX_SOURCE_DIRECTORY(libraries/task TASK_SRC)
-AUX_SOURCE_DIRECTORY(libraries/glua GLUA_SRC)
 LIST(REMOVE_ITEM GLUA_SRC "libraries/glua/main.cpp" "libraries/glua/cdemo1.cpp" "libraries/glua/Achain_lua_api.demo.cpp")
 
 if( APPLE )
@@ -58,44 +60,49 @@ elseif( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
     endif()
 endif()
 
-# Boost settings
+# SET BOOST and OPENSSL ENVS
 set(Boost_USE_STATIC_LIBS     ON)
 set(Boost_USE_MULTITHREADED   ON)
 set(Boost_USE_STATIC_RUNTIME  ON)
-# Specify Boost libraries that will use.
+set(BOOST_ROOT  $ENV{BOOST_ROOT})
 FIND_PACKAGE( Boost 1.54.0 REQUIRED COMPONENTS system program_options chrono context coroutine date_time exception filesystem iostreams locale thread )
+if(Boost_FOUND)
+    message("Boost include dir: ${Boost_INCLUDE_DIR}")
+    message("Boost library dir: ${Boost_LIBRARY_DIR}")
+else(Boost_FOUND)
+    message(FATAL_ERROR "BOOST not found!")
+endif(Boost_FOUND)
 
-set(CMAKE_CXX_FLAGS "-std=c++11 -DALP_GLOBAL_API_LOG=1 -fpermissive" )
-set(Boost_INCLUDE_DIR　"/usr/include/boost")
-set(Boost_LIBRARY_DIR  "/usr/lib/x86_64-linux-gnu")
+set( OPENSSL_ROOT_DIR  $ENV{OPENSSL_ROOT_DIR} )
+find_package(PkgConfig REQUIRED)
+pkg_search_module(OPENSSL REQUIRED openssl)
+
+if( OPENSSL_FOUND )
+    set(OPENSSL_INCLUDE_DIR ${OPENSSL_ROOT_DIR}/include)
+    set(OPENSSL_LIBRARY_DIR ${OPENSSL_ROOT_DIR}/lib)
+    message(STATUS "OpenSSL root and include directories  ${OPENSSL_ROOT_DIR},   ${OPENSSL_INCLUDE_DIR}  ")
+else()
+    message(FATAL_ERROR "OPENSSL not found!")
+endif()
+
+message(STATUS "openssl_libraries=${OPENSSL_LIBRARIES}")
+set(CMAKE_CXX_FLAGS "-std=c++11 -fpermissive" )
 
 INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} 
-        "./libraries/include"
-        "../include"
+         "include"
+         "libraries/include"
 )
 
-LINK_DIRECTORIES( ${Boost_LIBRARY_DIR}
-         "./"
-        "usr/local/lib"
-        "libraries/base"
-        "libraries/cli"
-        "libraries/client"
-        "libraries/glua"
-        "libraries/rpc"
-        "libraries/stub"
-        "libraries/task"
-)
+LINK_DIRECTORIES( ${Boost_LIBRARY_DIR} 
+         "/usr/local/lib"
+ )
 
-set(SOURCE_FILES main.cpp)
 add_library(fc STATIC IMPORTED)
 set_target_properties(fc PROPERTIES  IMPORTED_LOCATION /usr/local/lib/libfc.a)
 
-add_library(glua ${GLUA_SRC})
+add_library(glua STATIC ${BASE_SRC} ${CLI_SRC} ${CLIENT_SRC} ${GLUA_SRC} ${RPC_SRC} ${STUB_SRC} ${STORAGE_SRC} ${TASK_SRC})
 set_target_properties(glua PROPERTIES  IMPORTED_LOCATION_RELEASE ./libglua.a  IMPORTED_LINK_INTERFACE_LIBRARIES fc)
 
-add_library(total ${BASE_SRC} ${CLI_SRC} ${CLIENT_SRC} ${RPC_SRC} ${STUB_SRC} ${TASK_SRC})
-set_target_properties(total PROPERTIES  IMPORTED_LOCATION_RELEASE ./libtotal.a  IMPORTED_LINK_INTERFACE_LIBRARIES fc)
+add_executable(${PROJECT_NAME}  main.cpp)
 
-add_executable(lvm ${SOURCE_FILES})
-
-TARGET_LINK_LIBRARIES(lvm libtotal.a libglua.a fc libsecp256k1.a libleveldb.a libminiupnpc.a ${Boost_LIBRARIES} libcrypto.a dl)
+target_link_libraries(${PROJECT_NAME}  glua fc libsecp256k1.a ${Boost_LIBRARIES}  libcrypto.a dl pthread)
